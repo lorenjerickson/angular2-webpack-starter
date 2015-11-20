@@ -7,6 +7,14 @@ import {bootstrap, FORM_PROVIDERS, ELEMENT_PROBE_PROVIDERS} from 'angular2/angul
 import {ROUTER_PROVIDERS} from 'angular2/router';
 import {HTTP_PROVIDERS} from 'angular2/http';
 
+import {AUTH_PROVIDERS} from './services/auth';
+import {BROKER_PROVIDERS} from './services/broker';
+import {STORAGE_PROVIDERS} from './services/storage';
+import {URLFACTORY_PROVIDERS} from './services/url';
+import {CONFIG_PROVIDERS} from './services/config';
+import {CATEGORIES_PROVIDERS} from './services/categories';
+import {PLATFORM_PROVIDERS} from './services/platform';
+
 /*
  * App Component
  * our top level component that holds all of our components
@@ -19,6 +27,14 @@ import {App} from './app';
  */
 bootstrap(App, [
   // These are dependencies of our App
+  AUTH_PROVIDERS,
+  BROKER_PROVIDERS,
+  STORAGE_PROVIDERS,
+  URLFACTORY_PROVIDERS,
+  CONFIG_PROVIDERS,
+  CATEGORIES_PROVIDERS,
+  PLATFORM_PROVIDERS,
+  //---------------------------
   FORM_PROVIDERS,
   ROUTER_PROVIDERS,
   HTTP_PROVIDERS,

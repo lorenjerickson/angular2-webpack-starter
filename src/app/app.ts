@@ -11,6 +11,14 @@ import {Http, Headers} from 'angular2/http';
 import {CORE_DIRECTIVES, FORM_DIRECTIVES} from 'angular2/angular2';
 import {ROUTER_DIRECTIVES} from 'angular2/router';
 
+import {Broker, BrokerEvent} from './services/broker';
+import {Authorization} from './services/auth';
+import {Configuration} from './services/config';
+import {Storage} from './services/storage';
+
+import {PlatformStatus} from './components/platform-status/platform-status';
+import {Error} from './components/error/error';
+import {OauthLogin} from './components/login-oauth/login-oauth';
 
 /*
  * Directive
@@ -27,7 +35,6 @@ export class XLarge {
   }
 }
 
-
 /*
  * App Component
  * Top Level Component
@@ -39,7 +46,7 @@ export class XLarge {
   selector: 'app', // <app></app>
   // We need to tell Angular's compiler which directives are in our template.
   // Doing so will allow Angular to attach our behavior to an element
-  directives: [ CORE_DIRECTIVES, FORM_DIRECTIVES, ROUTER_DIRECTIVES, XLarge ],
+  directives: [CORE_DIRECTIVES, FORM_DIRECTIVES, ROUTER_DIRECTIVES, XLarge],
   // Our list of styles in our component. We may add more to compose many styles together
   styles: [`
     .title {
@@ -51,94 +58,116 @@ export class XLarge {
   `],
   // Every Angular template is first compiled by the browser before Angular runs it's compiler
   template: `
-  <header>
-    <h1 class="title">Hello {{ title }}</h1>
-  </header>
-
-  <main>
-    Your Content Here
-    <div>
-
-      <input type="text" [value]="title" (input)="title = $event.target.value" autofocus>
-      <!--
-        Rather than wiring up two-way data-binding ourselves
-        we can use Angular's [(ng-model)] syntax
-        <input type="text" [(ng-model)]="title">
-      -->
-    </div>
-
-    <pre>this.title = {{ title | json }}</pre>
-    <pre>this.data = {{ data | json }}</pre>
-
-  </main>
-
-  <footer x-large>
-    WebPack Angular 2 Starter by <a href="https://twitter.com/AngularClass">@AngularClass</a>
-  </footer>
+   	<header class="dash">
+			<h1 class="dash__title">{{appName}}</h1>
+			<nav class="dash__nav">
+				<a class="dash__link" [router-link]="['/PlatformStatus']">Platform Status</a>
+			</nav>
+		</header>
+		<router-outlet></router-outlet>
   `
 })
+@RouteConfig([
+  {
+		path: '/',
+		redirectTo: '/home'
+  }, {
+    path: '/platform-status',
+    as: 'PlatformStatus',
+    component: PlatformStatus
+  }, {
+    path: '/oauth-login',
+    as: 'OauthLogin',
+    component: OauthLogin
+  }, {
+    path: '/error',
+    as: 'Error',
+    component: Error
+  }
+])
 export class App {
-  // These are member type
-  title: string;
-  data: Array<any> = []; // default data
-  // TypeScript public modifiers
-  constructor(public http: Http) {
-    this.title = 'Angular 2';
+
+  _connectRetryInterval: any;
+
+  constructor(
+    private broker: Broker,
+    private auth: Authorization,
+    private config: Configuration,
+    private storage: Storage,
+    private router: Router
+  ) {
+    console.log('initializing App');
   }
 
   onInit() {
-    // Our API
-    // Before you start the app, run these commands in another process:
-    //
-    // - npm run express-install
-    // - npm run express
-    //
-    // This will start a process that will listen for requests on port 3001
-
-    const BASE_URL = 'http://localhost:3001';
-    const TODO_API_URL = '/api/todos';
-    const JSON_HEADERS = new Headers();
-
-    JSON_HEADERS.append('Accept', 'application/json');
-    JSON_HEADERS.append('Content-Type', 'application/json');
-
-    this.http
-      .get(BASE_URL + TODO_API_URL, {
-        headers: JSON_HEADERS
-      })
-      .subscribe(
-        // onNext callback
-        data => this.serverData(data),
-        // onError callback
-        err  => this.errorMessage(err),
-        // onComplete callback
-        ()   => console.log('complete')
-      );//end http
-
+    console.log('app: oninit()');
+    var cfgData = this.storage.get('config');
+    if (!cfgData) {
+      console.log('app: no config data available');
+      // this.config.on('control4.configuration.loaded', this.checkAuth);
+      this.config.load('/assets/config/env.json').then(
+        (result) => {
+          console.log('app: app config loaded, checking auth');
+          this.checkAuth();
+        },
+        (err) => {
+          console.error('app: error loading application config', err);
+        });
+    } else {
+      console.log('app: have config, let\s auth');
+      this.checkAuth();
+    }
   }
 
-  serverData(data) {
-    console.log('data', data);
-    this.data = data;
-  }//serverData
+  checkAuth() {
+    console.log('app: checkauth()');
 
-  errorMessage(err) {
-    console.info(`${'\n'
-      } // You must run these commands in another process for the Http API to work  ${'\n'
-      } npm run express-install ${'\n'
-      } npm run express
-    `);
-  }//errorMessage
+    if (!this.auth.isAuthorized()) {
+      console.log('app: not currently authorized');
+      // so we don't have a JWT, but we might be able to make one    
+      if (this.auth.isAuthenticated()) {
+        console.log('app: am authenticated, let\'s authorize');
+        // attempt to re-authorize
+        this.auth.on('control4.authorization.authorized', this.initBroker);
+        this.auth.authorize();
+      } else {
+        // not authorized or authenticated, gotta login
+        console.log('app: not authenitcated, let\'s login');
+        this.router.navigate(['OauthLogin']);
+      }
+    } else {
+      console.log('app: lucky! already authorized, lets init the api');
+      this.initBroker();
+    }
+  }
+
+  initBroker() {
+    console.log('app: initbroker()');
+    this.broker.on('control4.broker.connected', this.onBrokerConnected);
+    this.broker.on('control4.broker.disconnected', this.onBrokerDisconnected);
+    this.broker.init({
+      connectStream: true
+    });
+  }
+
+  onBrokerConnected(msg: BrokerEvent) {
+    console.log('app: broker connected');
+    if (this._connectRetryInterval) {
+      console.log('app: clearing connect timeout');
+      clearInterval(this._connectRetryInterval);
+      this._connectRetryInterval = null;
+    }
+  }
+
+  onBrokerDisconnected(msg: BrokerEvent) {
+    console.log('app: broker disconnected');
+    this._connectRetryInterval = setInterval(() => {
+      console.log('app: connect timeout expired, let\'s try connecting again');
+      this.broker.init({
+        connectStream: true
+      });
+    }, 10000);
+  }
 
 }
 
-
-
-/*
- * Please review the examples/ folder for more angular app examples
- * (The examples may not be updated as quickly. Please open an issue on github for us to update it)
- * you can change the `entry` in webpack.config to quickly view the examples
- * For help or questions please contact us at @AngularClass on twitter
- * or our chat on Slack at https://AngularClass.com/slack-join
- * or via chat on Gitter at https://gitter.im/AngularClass/angular2-webpack-starter
- */

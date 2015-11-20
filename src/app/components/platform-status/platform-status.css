@@ -1,0 +1,28 @@
+.platform-status {
+  padding: 12px;
+  border: 1px solid #aaa;
+  background: #eee;
+  color: #111;
+}
+
+.common-name {
+  font-size: 12pt;
+  font-weight: bold;
+}
+
+.api-status {
+  font-size: 12pt;
+  font-weight: normal;
+}
+
+.red {
+  color: #a22;
+}
+
+.yellow {
+  color: #cc2
+}
+
+.green {
+  color: #2a2;
+}

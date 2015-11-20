@@ -94,11 +94,11 @@ module.exports = {
     root: __dirname,
     extensions: ['','.ts','.js','.json'],
     alias: {
-      'rx': '@reactivex/rxjs'
+      'rx': '@reactivex/rxjs',
       // 'common': 'src/common',
       // 'bindings': 'src/bindings',
-      // 'components': 'src/app/components'
-      // 'services': 'src/app/services',
+      'components': 'src/app/components',
+      'services': 'src/app/services',
       // 'stores': 'src/app/stores'
     }
   },

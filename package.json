@@ -5,23 +5,23 @@
   "main": "",
   "scripts": {
     "build": "npm run webpack --colors --display-error-details --display-cached",
-    "webpack": "webpack",
+    "ci": "npm run e2e && npm run test",
     "clean": "rimraf node_modules doc",
     "clean-install": "npm run clean && npm install",
     "clean-start": "npm run clean && npm start",
-    "watch": "webpack --watch",
-    "server": "webpack-dev-server --inline --colors --display-error-details --display-cached --port 3000",
+    "docs": "typedoc  --options typedoc.json  src/**/*.ts",
+    "e2e": "protractor",
     "express": "node ./examples/server/express-server-example.js",
     "express-install": "npm install express connect-history-api-fallback morgan body-parser cors --save",
-    "webdriver-update": "webdriver-manager update",
-    "webdriver-start": "webdriver-manager start",
     "preprotractor": "npm run webdriver-update",
     "protractor": "protractor",
-    "e2e": "protractor",
-    "ci": "npm run e2e && npm run test",
+    "server": "webpack-dev-server --inline --colors --display-error-details --display-cached --port 3000",
+    "start": "npm run server",
     "test": "karma start",
-    "docs": "typedoc  --options typedoc.json  src/**/*.ts",
-    "start": "npm run server"
+    "watch": "webpack --watch",
+    "webdriver-start": "webdriver-manager start",
+    "webdriver-update": "webdriver-manager update",
+    "webpack": "webpack"
   },
   "repository": {
     "type": "git",
@@ -37,6 +37,7 @@
     "@reactivex/rxjs": "5.0.0-alpha.7",
     "angular2": "2.0.0-alpha.46",
     "reflect-metadata": "0.1.2",
+    "url": "^0.11.0",
     "zone.js": "0.5.8"
   },
   "devDependencies": {
